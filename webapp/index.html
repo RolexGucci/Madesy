@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>HujjatBot</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --bg: var(--tg-theme-bg-color, #ffffff);
+    --secondary-bg: var(--tg-theme-secondary-bg-color, #f0f2f5);
+    --text: var(--tg-theme-text-color, #1a1a1a);
+    --hint: var(--tg-theme-hint-color, #8a8a8a);
+    --link: var(--tg-theme-link-color, #2aabee);
+    --button: var(--tg-theme-button-color, #2aabee);
+    --button-text: var(--tg-theme-button-text-color, #ffffff);
+    --section-bg: var(--tg-theme-section-bg-color, #ffffff);
+    --border: rgba(0,0,0,0.08);
+    --danger: #e53935;
+    --success: #31b545;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding-bottom: 96px;
+  }
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .topbar button {
+    background: none; border: none; color: var(--link);
+    font-size: 20px; cursor: pointer; padding: 2px 6px 2px 0;
+  }
+  .topbar .title { font-weight: 700; font-size: 16px; flex: 1; }
+  .progress-track {
+    height: 3px; background: var(--border);
+  }
+  .progress-fill {
+    height: 100%; background: var(--button);
+    transition: width 0.35s ease;
+  }
+  .screen { padding: 20px 16px; animation: fadein 0.2s ease; }
+  @keyframes fadein { from { opacity:0; transform: translateY(4px);} to {opacity:1; transform: translateY(0);} }
+
+  .hero { text-align: center; margin: 28px 0 36px; }
+  .hero-icon {
+    width: 68px; height: 68px; border-radius: 20px; margin: 0 auto 14px;
+    background: linear-gradient(135deg, var(--button), #1a8bc4);
+    display: flex; align-items: center; justify-content: center; font-size: 30px;
+    box-shadow: 0 10px 26px rgba(42,171,238,0.28);
+  }
+  .hero h1 { font-size: 22px; font-weight: 800; margin: 0 0 4px; }
+  .hero p { color: var(--hint); font-size: 14px; margin: 0; }
+
+  .menu-card {
+    background: var(--section-bg); border-radius: 14px; padding: 16px 16px;
+    display: flex; align-items: center; gap: 14px; margin-bottom: 10px;
+    cursor: pointer; border: 1px solid var(--border);
+  }
+  .menu-card .ic {
+    width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 20px;
+  }
+  .menu-card .body { flex: 1; }
+  .menu-card .body b { display: block; font-size: 15px; }
+  .menu-card .body span { color: var(--hint); font-size: 12.5px; }
+  .menu-card .chev { color: var(--hint); font-size: 18px; }
+
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block; font-size: 13px; font-weight: 600; color: var(--hint);
+    margin-bottom: 6px;
+  }
+  .field input, .field textarea {
+    width: 100%; border-radius: 10px; border: 1.5px solid var(--border);
+    background: var(--secondary-bg); color: var(--text);
+    padding: 11px 12px; font-size: 15px; font-family: inherit;
+    outline: none;
+  }
+  .field input:focus, .field textarea:focus { border-color: var(--button); }
+  .section-title {
+    font-size: 13px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.03em; color: var(--hint); margin: 22px 0 10px;
+  }
+  .section-title:first-child { margin-top: 0; }
+
+  .type-card {
+    background: var(--section-bg); border: 2px solid var(--border); border-radius: 14px;
+    padding: 16px; display: flex; align-items: center; gap: 14px; margin-bottom: 10px; cursor: pointer;
+  }
+  .type-card.selected { border-color: var(--button); background: color-mix(in srgb, var(--button) 8%, var(--section-bg)); }
+  .type-card .emoji { font-size: 26px; }
+  .type-card b { display: block; font-size: 15px; }
+  .type-card span { color: var(--hint); font-size: 12.5px; }
+
+  .list-item {
+    background: var(--section-bg); border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px;
+  }
+  .list-item .info { flex: 1; }
+  .list-item .info b { display: block; font-size: 14px; }
+  .list-item .info span { color: var(--hint); font-size: 12px; }
+  .list-item .actions { display: flex; gap: 6px; }
+  .icon-btn {
+    background: var(--secondary-bg); border: none; border-radius: 8px;
+    width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 14px; color: var(--text);
+  }
+  .icon-btn.danger { color: var(--danger); }
+
+  .add-card {
+    background: var(--section-bg); border: 1.5px dashed var(--hint); border-radius: 12px;
+    padding: 12px; margin-bottom: 12px;
+  }
+  .dash-btn {
+    width: 100%; background: color-mix(in srgb, var(--button) 10%, var(--bg));
+    border: 2px dashed var(--button); color: var(--button);
+    border-radius: 12px; padding: 13px; font-size: 14px; font-weight: 600; cursor: pointer;
+    margin-bottom: 12px;
+  }
+
+  .photo-drop {
+    border: 2px dashed var(--button); border-radius: 16px; padding: 32px 20px;
+    text-align: center; background: color-mix(in srgb, var(--button) 6%, var(--bg));
+    cursor: pointer; margin-bottom: 16px;
+  }
+  .photo-drop .ic { font-size: 34px; margin-bottom: 8px; }
+  .photo-drop b { color: var(--link); display: block; font-size: 15px; margin-bottom: 3px; }
+  .photo-drop span { color: var(--hint); font-size: 12px; }
+  .photo-preview { text-align: center; margin-bottom: 16px; }
+  .photo-preview img {
+    width: 108px; height: 144px; object-fit: cover; border-radius: 10px;
+    border: 2px solid var(--border);
+  }
+
+  .fmt-card {
+    background: var(--section-bg); border: 2px solid var(--border); border-radius: 14px;
+    padding: 16px; display: flex; align-items: center; gap: 14px; margin-bottom: 10px; cursor: pointer;
+  }
+  .fmt-card .ic { width: 46px; height: 46px; border-radius: 12px; display:flex; align-items:center; justify-content:center; font-size: 20px; }
+
+  .preview-card {
+    margin-top: 24px; border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
+  }
+  .preview-head {
+    background: var(--secondary-bg); padding: 10px 14px; font-size: 12px; font-weight: 700;
+    color: var(--hint); text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  .preview-body {
+    padding: 14px; background: var(--section-bg); font-family: 'Times New Roman', serif;
+    font-size: 12.5px; line-height: 1.7;
+  }
+  .preview-body .doc-title { text-align: center; font-weight: 700; font-size: 14px; }
+  .preview-body .doc-name { text-align: center; font-weight: 700; margin-bottom: 8px; }
+  .preview-body .row { margin-bottom: 3px; }
+  .preview-body .row b { font-weight: 700; }
+  .preview-body .muted { color: var(--hint); font-style: italic; }
+
+  .bottom-bar {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 30;
+    background: var(--bg); border-top: 1px solid var(--border);
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    display: flex; gap: 10px;
+  }
+  .btn {
+    flex: 1; padding: 14px; border-radius: 12px; border: none;
+    font-size: 15px; font-weight: 700; cursor: pointer; text-align: center;
+  }
+  .btn-primary { background: var(--button); color: var(--button-text); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-ghost { background: var(--secondary-bg); color: var(--text); flex: 0 0 auto; padding: 14px 18px; }
+
+  .loading-wrap {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 80px 20px; text-align: center;
+  }
+  .spinner {
+    width: 44px; height: 44px; border-radius: 50%;
+    border: 4px solid var(--border); border-top-color: var(--button);
+    animation: spin 0.8s linear infinite; margin-bottom: 18px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .success-wrap { text-align: center; padding: 60px 20px; }
+  .success-wrap .ic { font-size: 56px; margin-bottom: 14px; }
+
+  .hidden { display: none !important; }
+  .warn-box {
+    background: #fff8e1; border: 1px solid #ffd54f; border-radius: 12px;
+    padding: 12px 14px; font-size: 13px; color: #795548; line-height: 1.5; margin-top: 14px;
+  }
+</style>
+</head>
+<body>
+
+<div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+
+<div id="app"></div>
+
+<script>
+const tg = window.Telegram?.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+
+const state = {
+  screen: "home",
+  turi: null,
+  answers: {},
+  mehnat: [],
+  qarindoshlar: [],
+  photoBase64: null,
+  format: null,
+  editingMehnatIdx: null,
+  editingQarIdx: null,
+};
+
+const ISHCHI_FIELDS = [
+  { id: "fio", label: "To'liq ismingiz (FIO)", ph: "Aliyev Sardor Rustamovich" },
+  { id: "tashkilot", label: "Ish joyi (tashkilot va bo'lim)", ph: "Termiz shahar Tibbiyot birlashmasi" },
+  { id: "tug_yil", label: "Tug'ilgan sanangiz", ph: "15.03.1995" },
+  { id: "tug_joy", label: "Tug'ilgan joyingiz", ph: "Surxondaryo viloyati, Termiz shahri" },
+  { id: "millat", label: "Millatingiz", ph: "O'zbek" },
+  { id: "partiya", label: "Partiyaviyligi", ph: "Yo'q" },
+  { id: "malumot", label: "Ma'lumot darajasi", ph: "Oliy / O'rta maxsus" },
+  { id: "tamomlagan", label: "Qaysi o'quv yurtini, qachon tamomlagan", ph: "2018-yil TerDU" },
+  { id: "mutaxassislik", label: "Mutaxassisligi", ph: "Iqtisodchi" },
+];
+
+const TALABA_FIELDS = [
+  { id: "fio", label: "To'liq ismingiz (FIO)", ph: "Aliyev Sardor Rustamovich" },
+  { id: "tashkilot", label: "O'quv yurti va fakultet", ph: "Termiz Davlat Universiteti, Tarix fakulteti" },
+  { id: "kurs", label: "Kurs va ta'lim darajasi", ph: "2-kurs, bakalavriat" },
+  { id: "tug_yil", label: "Tug'ilgan sanangiz", ph: "15.03.2005" },
+  { id: "tug_joy", label: "Tug'ilgan joyingiz", ph: "Surxondaryo viloyati, Termiz shahri" },
+  { id: "millat", label: "Millatingiz", ph: "O'zbek" },
+  { id: "partiya", label: "Partiyaviyligi", ph: "Yo'q" },
+  { id: "malumot", label: "Oldingi ta'lim (maktab/kollej)", ph: "2023-yil Termiz 5-maktab" },
+  { id: "mutaxassislik", label: "O'qish yo'nalishi (mutaxassislik)", ph: "Tarix" },
+];
+
+const TAIL_FIELDS = [
+  { id: "ilmiy_daraja", label: "Ilmiy darajasi", ph: "Yo'q" },
+  { id: "ilmiy_unvon", label: "Ilmiy unvoni", ph: "Yo'q" },
+  { id: "chet_til", label: "Chet tillarini bilishi", ph: "Rus tili, Ingliz tili" },
+  { id: "harbiy", label: "Harbiy (maxsus) unvoni", ph: "Yo'q" },
+  { id: "mukofot", label: "Davlat mukofoti bilan taqdirlanganmi", ph: "Yo'q" },
+  { id: "deputat", label: "Xalq deputati yoki saylanadigan organ a'zosimi", ph: "Yo'q" },
+  { id: "tel", label: "Telefon raqamingiz", ph: "90 123 45 67" },
+  { id: "pasport", label: "Pasport seriya va raqami", ph: "AA 1234567" },
+  { id: "jshshir", label: "JSHSHIR raqami (ixtiyoriy)", ph: "-" },
+];
+
+function fieldsFor(turi) {
+  return (turi === "ishchi" ? ISHCHI_FIELDS : TALABA_FIELDS).concat(TAIL_FIELDS);
+}
+
+function esc(s) {
+  return (s || "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+function render() {
+  const app = document.getElementById("app");
+  app.innerHTML = renderScreen();
+  bindEvents();
+  updateProgress();
+  window.scrollTo(0, 0);
+}
+
+function updateProgress() {
+  const order = ["home","docType","form","mehnat","qarindoshlar","photo","format","loading","success"];
+  const idx = order.indexOf(state.screen);
+  const pct = state.screen === "home" ? 0 : Math.round((idx / (order.length - 2)) * 100);
+  document.getElementById("progressFill").style.width = Math.min(pct, 100) + "%";
+}
+
+function topbar(title, onBack) {
+  return `<div class="topbar">
+    ${onBack ? `<button id="backBtn">←</button>` : ""}
+    <div class="title">${title}</div>
+  </div>`;
+}
+
+function renderScreen() {
+  switch (state.screen) {
+    case "home": return screenHome();
+    case "docType": return screenDocType();
+    case "form": return screenForm();
+    case "mehnat": return screenMehnat();
+    case "qarindoshlar": return screenQarindoshlar();
+    case "photo": return screenPhoto();
+    case "format": return screenFormat();
+    case "loading": return screenLoading();
+    case "success": return screenSuccess();
+    default: return screenHome();
+  }
+}
+
+function screenHome() {
+  return `
+  <div class="screen">
+    <div class="hero">
+      <div class="hero-icon">📋</div>
+      <h1>HujjatBot</h1>
+      <p>AI yordamida rasmiy hujjatlar</p>
+    </div>
+    <div class="menu-card" data-soon="3×4 Rasm">
+      <div class="ic" style="background:linear-gradient(135deg,#667eea,#764ba2)">📸</div>
+      <div class="body"><b>3×4 Rasm</b><span>Tez orada</span></div>
+      <div class="chev">›</div>
+    </div>
+    <div class="menu-card" data-nav="docType">
+      <div class="ic" style="background:linear-gradient(135deg,var(--button),#1a8bc4)">📄</div>
+      <div class="body"><b>Obyektivka</b><span>MA'LUMOTNOMA hujjati (PDF yoki Word)</span></div>
+      <div class="chev">›</div>
+    </div>
+    <div class="menu-card" data-soon="Slayd tayyorlash">
+      <div class="ic" style="background:linear-gradient(135deg,#f39c12,#e67e22)">📊</div>
+      <div class="body"><b>Slayd tayyorlash</b><span>Tez orada</span></div>
+      <div class="chev">›</div>
+    </div>
+    <div class="menu-card" data-soon="Test tayyorlash">
+      <div class="ic" style="background:linear-gradient(135deg,#11998e,#38ef7d)">📝</div>
+      <div class="body"><b>Test tayyorlash</b><span>Tez orada</span></div>
+      <div class="chev">›</div>
+    </div>
+  </div>`;
+}
+
+function screenDocType() {
+  return `
+  ${topbar("Obyektivka turi", true)}
+  <div class="screen">
+    <p style="color:var(--hint);font-size:14px;margin:0 0 16px;">Qanday obyektivka kerak?</p>
+    <div class="type-card ${state.turi==='ishchi'?'selected':''}" data-type="ishchi">
+      <span class="emoji">👔</span>
+      <div><b>Xodim obyektivkasi</b><span>Ishlovchi shaxslar uchun</span></div>
+    </div>
+    <div class="type-card ${state.turi==='talaba'?'selected':''}" data-type="talaba">
+      <span class="emoji">🎓</span>
+      <div><b>Talaba obyektivkasi</b><span>O'quvchi va talabalar uchun</span></div>
+    </div>
+  </div>`;
+}
+
+function screenForm() {
+  const fields = fieldsFor(state.turi);
+  const mainCount = state.turi === "ishchi" ? ISHCHI_FIELDS.length : TALABA_FIELDS.length;
+  let html = topbar("Ma'lumotlar", true) + `<div class="screen">`;
+  html += `<div class="section-title">Asosiy ma'lumotlar</div>`;
+  fields.forEach((f, i) => {
+    if (i === mainCount) html += `<div class="section-title">Qo'shimcha ma'lumotlar</div>`;
+    html += `<div class="field"><label>${esc(f.label)}</label>
+      <input type="text" data-field="${f.id}" placeholder="${esc(f.ph)}" value="${esc(state.answers[f.id]||'')}">
+    </div>`;
+  });
+  html += renderPreview();
+  html += `</div>`;
+  html += `<div class="bottom-bar">
+    <button class="btn btn-primary" id="continueBtn">Davom etish →</button>
+  </div>`;
+  return html;
+}
+
+function renderPreview() {
+  const a = state.answers;
+  if (!a.fio) return "";
+  return `<div class="preview-card">
+    <div class="preview-head">Hujjat ko'rinishi (jonli)</div>
+    <div class="preview-body">
+      <div class="doc-title">MA'LUMOTNOMA</div>
+      <div class="doc-name">${esc(a.fio)}</div>
+      <div class="row"><b>Tug'ilgan yili:</b> ${a.tug_yil ? esc(a.tug_yil) : '<span class="muted">to\'ldirilmagan</span>'}</div>
+      <div class="row"><b>Tug'ilgan joyi:</b> ${a.tug_joy ? esc(a.tug_joy) : '<span class="muted">to\'ldirilmagan</span>'}</div>
+      <div class="row"><b>Millati:</b> ${a.millat ? esc(a.millat) : '<span class="muted">-</span>'}</div>
+      <div class="row"><b>Mutaxassisligi:</b> ${a.mutaxassislik ? esc(a.mutaxassislik) : '<span class="muted">-</span>'}</div>
+    </div>
+  </div>`;
+}
+
+function screenMehnat() {
+  let html = topbar("Mehnat faoliyati", true) + `<div class="screen">`;
+  html += `<p style="color:var(--hint);font-size:13px;margin:0 0 14px;">Qayerda ishlagan yoki ishlaydi</p>`;
+  state.mehnat.forEach((m, i) => {
+    html += `<div class="list-item">
+      <div class="info"><b>${esc(m.yillar)} yy.</b><span>${esc(m.tashkilot)}</span></div>
+      <div class="actions">
+        <button class="icon-btn" data-edit-mehnat="${i}">✎</button>
+        <button class="icon-btn danger" data-del-mehnat="${i}">✕</button>
+      </div>
+    </div>`;
+  });
+  const editing = state.editingMehnatIdx;
+  const editVal = editing !== null ? state.mehnat[editing] : { yillar: "", tashkilot: "" };
+  html += `<div class="add-card">
+    <div class="field" style="margin-bottom:8px;"><input type="text" id="mehnatYil" placeholder="Yillar (masalan 2018-2022)" value="${esc(editVal.yillar)}"></div>
+    <div class="field" style="margin-bottom:8px;"><input type="text" id="mehnatJoy" placeholder="Tashkilot nomi va lavozim" value="${esc(editVal.tashkilot)}"></div>
+    <button class="dash-btn" id="mehnatAddBtn" style="margin-bottom:0;">${editing !== null ? '✓ Saqlash' : '+ Qo\'shish'}</button>
+  </div>`;
+  html += `</div>`;
+  html += `<div class="bottom-bar">
+    <button class="btn btn-primary" id="continueBtn">Davom etish →</button>
+  </div>`;
+  return html;
+}
+
+function screenQarindoshlar() {
+  let html = topbar("Yaqin qarindoshlari", true) + `<div class="screen">`;
+  html += `<p style="color:var(--hint);font-size:13px;margin:0 0 14px;">Ota, ona, aka/opa, turmush o'rtog'i, farzandlar</p>`;
+  state.qarindoshlar.forEach((q, i) => {
+    html += `<div class="list-item">
+      <div class="info"><b>${esc(q.munosabat)}: ${esc(q.fio)}</b><span>${esc(q.tug)}</span></div>
+      <div class="actions">
+        <button class="icon-btn" data-edit-qar="${i}">✎</button>
+        <button class="icon-btn danger" data-del-qar="${i}">✕</button>
+      </div>
+    </div>`;
+  });
+  const editing = state.editingQarIdx;
+  const ev = editing !== null ? state.qarindoshlar[editing] : { munosabat:"", fio:"", tug:"", ish:"", turar:"" };
+  html += `<div class="add-card">
+    <div class="field" style="margin-bottom:8px;"><input type="text" id="qMunosabat" placeholder="Qarindoshligi (Otasi, Onasi...)" value="${esc(ev.munosabat)}"></div>
+    <div class="field" style="margin-bottom:8px;"><input type="text" id="qFio" placeholder="To'liq ismi (FIO)" value="${esc(ev.fio)}"></div>
+    <div class="field" style="margin-bottom:8px;"><input type="text" id="qTug" placeholder="Tug'ilgan yili va joyi" value="${esc(ev.tug)}"></div>
+    <div class="field" style="margin-bottom:8px;"><input type="text" id="qIsh" placeholder="Ish joyi va lavozimi" value="${esc(ev.ish)}"></div>
+    <div class="field" style="margin-bottom:8px;"><input type="text" id="qTurar" placeholder="Turar joyi" value="${esc(ev.turar)}"></div>
+    <button class="dash-btn" id="qarAddBtn" style="margin-bottom:0;">${editing !== null ? '✓ Saqlash' : '+ Qo\'shish'}</button>
+  </div>`;
+  html += `</div>`;
+  html += `<div class="bottom-bar">
+    <button class="btn btn-primary" id="continueBtn">Davom etish →</button>
+  </div>`;
+  return html;
+}
+
+function screenPhoto() {
+  let html = topbar("3×4 rasm", true) + `<div class="screen">`;
+  if (state.photoBase64) {
+    html += `<div class="photo-preview"><img src="${state.photoBase64}"></div>
+      <div class="dash-btn" id="photoChangeBtn" style="text-align:center;">Boshqa rasm tanlash</div>`;
+  } else {
+    html += `<div class="photo-drop" id="photoDrop">
+      <div class="ic">🖼️</div>
+      <b>Rasm yuklash</b>
+      <span>JPG · PNG · WEBP</span>
+    </div>`;
+  }
+  html += `<input type="file" id="photoInput" accept="image/*" class="hidden">`;
+  html += `<p style="color:var(--hint);font-size:13px;text-align:center;">Rasmsiz ham davom etishingiz mumkin</p>`;
+  html += `</div>`;
+  html += `<div class="bottom-bar">
+    <button class="btn btn-primary" id="continueBtn">Davom etish →</button>
+  </div>`;
+  return html;
+}
+
+function screenFormat() {
+  let html = topbar("Format tanlang", true) + `<div class="screen">`;
+  html += `<p style="color:var(--hint);font-size:14px;margin:0 0 18px;">Obyektivkani qanday formatda olmoqchisiz?</p>`;
+  html += `<div class="fmt-card" data-fmt="pdf">
+    <div class="ic" style="background:#e5393520;">📕</div>
+    <div><b style="color:#e53935;">PDF format</b><br><span style="color:var(--hint);font-size:12.5px;">Ko'rish va chop etish uchun</span></div>
+  </div>`;
+  html += `<div class="fmt-card" data-fmt="word">
+    <div class="ic" style="background:#1976d220;">📘</div>
+    <div><b style="color:#1976d2;">Word (.docx)</b><br><span style="color:var(--hint);font-size:12.5px;">Tahrirlash uchun qulay</span></div>
+  </div>`;
+  html += renderPreview();
+  html += `</div>`;
+  return html;
+}
+
+function screenLoading() {
+  return `<div class="loading-wrap">
+    <div class="spinner"></div>
+    <h3>Hujjat tayyorlanmoqda...</h3>
+    <p style="color:var(--hint);font-size:14px;">Bir necha soniya kuting</p>
+  </div>`;
+}
+
+function screenSuccess() {
+  return `<div class="success-wrap">
+    <div class="ic">✅</div>
+    <h2>Tayyor!</h2>
+    <p style="color:var(--hint);font-size:14px;">Hujjatingiz Telegram chatingizga yuborildi.</p>
+    <div class="bottom-bar">
+      <button class="btn btn-primary" id="homeBtn">Bosh sahifaga qaytish</button>
+    </div>
+  </div>`;
+}
+
+function bindEvents() {
+  document.getElementById("backBtn")?.addEventListener("click", goBack);
+  document.getElementById("homeBtn")?.addEventListener("click", () => { resetAll(); state.screen = "home"; render(); });
+
+  document.querySelectorAll("[data-nav]").forEach(el => {
+    el.addEventListener("click", () => {
+      state.screen = el.dataset.nav;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-soon]").forEach(el => {
+    el.addEventListener("click", () => {
+      tg?.HapticFeedback?.notificationOccurred("warning");
+      if (tg?.showAlert) {
+        tg.showAlert(`${el.dataset.soon} — tez orada qo'shiladi!`);
+      } else {
+        alert(`${el.dataset.soon} — tez orada qo'shiladi!`);
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-type]").forEach(el => {
+    el.addEventListener("click", () => {
+      state.turi = el.dataset.type;
+      state.answers = {};
+      state.screen = "form";
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-field]").forEach(el => {
+    el.addEventListener("input", () => {
+      state.answers[el.dataset.field] = el.value;
+      const preview = document.querySelector(".preview-card");
+      if (preview) {
+        const wrap = document.createElement("div");
+        wrap.innerHTML = renderPreview();
+        preview.replaceWith(wrap.firstElementChild || document.createTextNode(""));
+      } else if (el.dataset.field === "fio" && el.value) {
+        document.querySelector(".screen").insertAdjacentHTML("beforeend", renderPreview());
+      }
+    });
+  });
+
+  document.getElementById("continueBtn")?.addEventListener("click", handleContinue);
+
+  document.getElementById("mehnatAddBtn")?.addEventListener("click", () => {
+    const yil = document.getElementById("mehnatYil").value.trim();
+    const joy = document.getElementById("mehnatJoy").value.trim();
+    if (!yil || !joy) { tg?.HapticFeedback?.notificationOccurred("error"); return; }
+    if (state.editingMehnatIdx !== null) {
+      state.mehnat[state.editingMehnatIdx] = { yillar: yil, tashkilot: joy };
+      state.editingMehnatIdx = null;
+    } else {
+      state.mehnat.push({ yillar: yil, tashkilot: joy });
+    }
+    render();
+  });
+  document.querySelectorAll("[data-del-mehnat]").forEach(el => {
+    el.addEventListener("click", () => { state.mehnat.splice(+el.dataset.delMehnat, 1); render(); });
+  });
+  document.querySelectorAll("[data-edit-mehnat]").forEach(el => {
+    el.addEventListener("click", () => { state.editingMehnatIdx = +el.dataset.editMehnat; render(); });
+  });
+
+  document.getElementById("qarAddBtn")?.addEventListener("click", () => {
+    const munosabat = document.getElementById("qMunosabat").value.trim();
+    const fio = document.getElementById("qFio").value.trim();
+    const tug = document.getElementById("qTug").value.trim();
+    const ish = document.getElementById("qIsh").value.trim();
+    const turar = document.getElementById("qTurar").value.trim();
+    if (!munosabat || !fio) { tg?.HapticFeedback?.notificationOccurred("error"); return; }
+    const entry = { munosabat, fio, tug, ish, turar };
+    if (state.editingQarIdx !== null) {
+      state.qarindoshlar[state.editingQarIdx] = entry;
+      state.editingQarIdx = null;
+    } else {
+      state.qarindoshlar.push(entry);
+    }
+    render();
+  });
+  document.querySelectorAll("[data-del-qar]").forEach(el => {
+    el.addEventListener("click", () => { state.qarindoshlar.splice(+el.dataset.delQar, 1); render(); });
+  });
+  document.querySelectorAll("[data-edit-qar]").forEach(el => {
+    el.addEventListener("click", () => { state.editingQarIdx = +el.dataset.editQar; render(); });
+  });
+
+  document.getElementById("photoDrop")?.addEventListener("click", () => document.getElementById("photoInput").click());
+  document.getElementById("photoChangeBtn")?.addEventListener("click", () => document.getElementById("photoInput").click());
+  document.getElementById("photoInput")?.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => { state.photoBase64 = reader.result; render(); };
+    reader.readAsDataURL(file);
+  });
+
+  document.querySelectorAll("[data-fmt]").forEach(el => {
+    el.addEventListener("click", () => { state.format = el.dataset.fmt; submitDocument(); });
+  });
+}
+
+function goBack() {
+  const map = {
+    docType: "home", form: "docType", mehnat: "form",
+    qarindoshlar: "mehnat", photo: "qarindoshlar", format: "photo",
+  };
+  state.screen = map[state.screen] || "home";
+  state.editingMehnatIdx = null;
+  state.editingQarIdx = null;
+  render();
+}
+
+function handleContinue() {
+  if (state.screen === "form") state.screen = "mehnat";
+  else if (state.screen === "mehnat") state.screen = "qarindoshlar";
+  else if (state.screen === "qarindoshlar") state.screen = "photo";
+  else if (state.screen === "photo") {
+    state.screen = "format";
+  }
+  render();
+}
+
+function resetAll() {
+  state.turi = null; state.answers = {}; state.mehnat = []; state.qarindoshlar = [];
+  state.photoBase64 = null; state.format = null;
+  state.editingMehnatIdx = null; state.editingQarIdx = null;
+}
+
+async function submitDocument() {
+  state.screen = "loading";
+  render();
+
+  const payload = {
+    initData: tg?.initData || "",
+    turi: state.turi,
+    answers: state.answers,
+    mehnat: state.mehnat,
+    qarindoshlar: state.qarindoshlar,
+    photo_base64: state.photoBase64,
+    format: state.format,
+  };
+
+  try {
+    const res = await fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      state.screen = "success";
+      tg?.HapticFeedback?.notificationOccurred("success");
+    } else {
+      alert("Xatolik: " + (data.error || "noma'lum xato"));
+      state.screen = "format";
+    }
+  } catch (e) {
+    alert("Tarmoq xatosi: " + e.message);
+    state.screen = "format";
+  }
+  render();
+}
+
+render();
+</script>
+</body>
+</html>
